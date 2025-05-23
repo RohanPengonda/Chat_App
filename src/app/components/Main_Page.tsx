@@ -17,18 +17,28 @@ interface Message {
   senderName?: string;
 }
 
+interface Conversation {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  last_message_id: string | null; // last_message_id can be null
+  updated_at?: string;
+}
+
+interface LastMessagePreview {
+  id: string;
+  context: string;
+  sender_id: string;
+  timestamp: string;
+}
+
 interface Client {
   id: string;
   name: string;
   email?: string;
   mobile?: string;
   messages: Message[];
-  lastMessagePreview?: {
-    id: string;
-    context: string;
-    sender_id: string;
-    timestamp: string;
-  };
+  lastMessagePreview?: LastMessagePreview; // Use the more specific interface here
 }
 
 interface Main_PageProps {
@@ -84,21 +94,28 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
       }
 
       const lastMessageIds = conversations
-        .filter((conv) => conv.last_message_id !== null)
+        .filter(
+          (conv): conv is Conversation & { last_message_id: string } =>
+            conv.last_message_id !== null
+        )
         .map((conv) => conv.last_message_id);
 
-      const { data: lastMessages, error: msgError } = await supabase
-        .from("messages")
-        .select("id, context, sender_id, timestamp")
-        .in("id", lastMessageIds);
+      let lastMessages: LastMessagePreview[] | null = null;
+      if (lastMessageIds.length > 0) {
+        const { data, error: msgError } = await supabase
+          .from("messages")
+          .select("id, context, sender_id, timestamp")
+          .in("id", lastMessageIds);
 
-      if (msgError) {
-        console.error("Error fetching last messages:", msgError.message);
+        if (msgError) {
+          console.error("Error fetching last messages:", msgError.message);
+        } else {
+          lastMessages = data;
+        }
       }
 
-      // Map of conversationId to last message
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const convMap = new Map<string, any>();
+      // Map of otherUserId to last message preview
+      const convMap = new Map<string, LastMessagePreview>();
       conversations.forEach((conv) => {
         const msg = lastMessages?.find((m) => m.id === conv.last_message_id);
         const otherUserId =
@@ -112,7 +129,7 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
       const processedClients: Client[] = allClients.map((client) => ({
         ...client,
         messages: [],
-        lastMessagePreview: convMap.get(client.id) || undefined,
+        lastMessagePreview: convMap.get(client.id), // No need for || undefined here
       }));
 
       setClients(processedClients);
@@ -135,16 +152,19 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
       const user2_id =
         currentUser.id < selectedClient.id ? selectedClient.id : currentUser.id;
 
-      // eslint-disable-next-line prefer-const
-      let { data: conversation, error } = await supabase
+      let conversation: Conversation | null = null;
+      const { data: initialConv, error } = await supabase
         .from("conversations")
         .select("*")
         .eq("user1_id", user1_id)
         .eq("user2_id", user2_id)
         .single();
 
+      conversation = initialConv;
+
       if (error && error.code === "PGRST116") {
-        const { data: newConv, error: createError } = await supabase
+        // If conversation not found, create it
+        const { data: newConversationData, error: createError } = await supabase
           .from("conversations")
           .insert({ user1_id, user2_id })
           .select()
@@ -153,9 +173,15 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
           console.error("Error creating conversation:", createError.message);
           return;
         }
-        conversation = newConv;
+        conversation = newConversationData;
       } else if (error) {
         console.error("Error fetching conversation:", error.message);
+        return;
+      }
+
+      // Ensure conversation is not null before proceeding
+      if (!conversation) {
+        console.error("Conversation object is null after fetch/create.");
         return;
       }
 
@@ -194,7 +220,7 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
             filter: `conversation_id=eq.${conversation.id}`,
           },
           (payload) => {
-            const newMessage = payload.new as Message;
+            const newMessage = payload.new as Message; // Explicitly cast to Message
             setSelectedClient((prev) =>
               prev
                 ? {

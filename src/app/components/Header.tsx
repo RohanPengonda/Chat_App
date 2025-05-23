@@ -24,7 +24,7 @@ export default function Header() {
       {/* Right - Action icons */}
       <div className="flex items-center space-x-3 text-gray-600 text-sm">
         <button
-          className="flex items-center px-2 py-1 border border-gray-500 rounded-md hover:bg-gray-100 bg-red-400"
+          className="flex items-center px-2 py-1 border cursor-pointer border-gray-500 rounded-md bg-red-100 hover:bg-red-400"
           onClick={() => router.push("/logout")}
         >
           <p className="text-[13px] text-gray-900">Logout</p>
