@@ -65,7 +65,7 @@ const ChatCard = ({
       const enriched = data.map((c) => ({
         ...c,
         messages: [],
-        lastMessagePreview: null,
+        lastMessagePreview: undefined,
       })) as Client[];
 
       setFilteredClients(enriched);
