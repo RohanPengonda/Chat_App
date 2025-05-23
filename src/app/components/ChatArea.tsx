@@ -1,6 +1,6 @@
 // ChatArea.tsx
-"use client"; // Keep this directive if it was in your original file.
-import React, { useState, useEffect, useRef } from "react";
+"use client";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 import { IoSend } from "react-icons/io5";
 import { FiPaperclip, FiSmile, FiClock, FiAlignRight } from "react-icons/fi";
