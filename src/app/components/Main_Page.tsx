@@ -97,6 +97,7 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
       }
 
       // Map of conversationId to last message
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const convMap = new Map<string, any>();
       conversations.forEach((conv) => {
         const msg = lastMessages?.find((m) => m.id === conv.last_message_id);
@@ -134,6 +135,7 @@ const Main_Page = ({ loggedInUserId }: Main_PageProps) => {
       const user2_id =
         currentUser.id < selectedClient.id ? selectedClient.id : currentUser.id;
 
+      // eslint-disable-next-line prefer-const
       let { data: conversation, error } = await supabase
         .from("conversations")
         .select("*")
